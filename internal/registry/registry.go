@@ -208,10 +208,43 @@ func (r *Registry) validateLocked() {
 		entry.state.LastError = ""
 	}
 
-	for _, entry := range r.entries {
-		if entry.state.Status != model.StatusEnabled {
-			continue
+	cycled := r.detectCyclesLocked()
+	for id := range cycled {
+		if entry, ok := r.entries[id]; ok && entry.state.Status == model.StatusEnabled {
+			entry.state.Status = model.StatusError
+			entry.state.LastError = "dependency cycle detected"
 		}
+	}
+
+	r.validateDependenciesLocked()
+}
+
+func (r *Registry) validateDependenciesLocked() {
+	visiting := make(map[string]bool, len(r.entries))
+	visited := make(map[string]bool, len(r.entries))
+
+	var validate func(id string) model.Status
+	validate = func(id string) model.Status {
+		entry, ok := r.entries[id]
+		if !ok {
+			return model.StatusMissingDependency
+		}
+		if entry.state.Status != model.StatusEnabled {
+			return entry.state.Status
+		}
+		if visiting[id] {
+			return entry.state.Status
+		}
+		if visited[id] {
+			return entry.state.Status
+		}
+
+		visiting[id] = true
+		defer func() {
+			visiting[id] = false
+			visited[id] = true
+		}()
+
 		for _, dep := range entry.manifest.DependsOn {
 			depEntry, ok := r.entries[dep.ID]
 			if !ok {
@@ -220,36 +253,37 @@ func (r *Registry) validateLocked() {
 				}
 				entry.state.Status = model.StatusMissingDependency
 				entry.state.LastError = fmt.Sprintf("required dependency %q is not loaded", dep.ID)
-				break
+				return entry.state.Status
 			}
-			if depEntry.state.Status != model.StatusEnabled {
+
+			depStatus := validate(dep.ID)
+			if depStatus != model.StatusEnabled {
 				if dep.Optional {
 					continue
 				}
 				entry.state.Status = model.StatusMissingDependency
-				entry.state.LastError = fmt.Sprintf("required dependency %q is %s", dep.ID, depEntry.state.Status)
-				break
+				entry.state.LastError = fmt.Sprintf("required dependency %q is %s", dep.ID, depStatus)
+				return entry.state.Status
 			}
+
 			ok, err := version.Satisfies(depEntry.manifest.Version, dep.Version)
 			if err != nil {
 				entry.state.Status = model.StatusError
 				entry.state.LastError = fmt.Sprintf("invalid dependency constraint for %q: %v", dep.ID, err)
-				break
+				return entry.state.Status
 			}
 			if !ok {
 				entry.state.Status = model.StatusMissingDependency
 				entry.state.LastError = fmt.Sprintf("dependency %q version %s does not satisfy %q", dep.ID, depEntry.manifest.Version, dep.Version)
-				break
+				return entry.state.Status
 			}
 		}
+
+		return entry.state.Status
 	}
 
-	cycled := r.detectCyclesLocked()
-	for id := range cycled {
-		if entry, ok := r.entries[id]; ok && entry.state.Status == model.StatusEnabled {
-			entry.state.Status = model.StatusError
-			entry.state.LastError = "dependency cycle detected"
-		}
+	for id := range r.entries {
+		validate(id)
 	}
 }
 

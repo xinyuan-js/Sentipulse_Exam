@@ -196,24 +196,27 @@ stateDiagram-v2
 ```mermaid
 flowchart TD
     Start[开始校验注册表] --> Init[按 manifest enabled 初始化状态]
-    Init --> CheckPlugin{遍历启用插件}
-    CheckPlugin --> CheckDeps[遍历 depends_on]
+    Init --> Cycle[检测依赖环]
+    Cycle --> HasCycle{发现环}
+    HasCycle -->|是| MarkError[环上插件标记 error]
+    HasCycle -->|否| RecursiveCheck[递归校验依赖状态]
+    MarkError --> RecursiveCheck
+    RecursiveCheck --> CheckPlugin{遍历启用插件}
+    CheckPlugin --> CheckDeps[DFS 遍历 depends_on]
     CheckDeps --> Exists{依赖是否存在}
     Exists -->|否且必需| Missing[标记 missing_dependency]
     Exists -->|否但可选| NextDep[跳过可选依赖]
-    Exists -->|是| DepEnabled{依赖是否 enabled}
+    Exists -->|是| ValidateDep[先递归校验依赖插件]
+    ValidateDep --> DepEnabled{依赖最终状态是否 enabled}
     DepEnabled -->|否且必需| Missing
+    DepEnabled -->|否但可选| NextDep
     DepEnabled -->|是| Version{版本是否满足约束}
     Version -->|否| Missing
     Version -->|是| NextDep
     NextDep --> MoreDeps{还有依赖}
     MoreDeps -->|是| CheckDeps
-    MoreDeps -->|否| Cycle[检测依赖环]
-    Cycle --> HasCycle{发现环}
-    HasCycle -->|是| MarkError[环上插件标记 error]
-    HasCycle -->|否| Ready[状态可执行]
-    Missing --> Cycle
-    MarkError --> Ready
+    MoreDeps -->|否| Ready[状态可执行]
+    Missing --> Ready
 ```
 
 ### 并发安全

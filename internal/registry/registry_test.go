@@ -111,6 +111,22 @@ func TestRegistryDependencyValidation(t *testing.T) {
 	requireStatus(t, registry, "dependent", model.StatusMissingDependency)
 }
 
+func TestRegistryPropagatesTransitiveDependencyFailure(t *testing.T) {
+	registry := NewRegistry()
+	middle := testManifest("middle", "1.0.0")
+	middle.DependsOn = []model.Dependency{{ID: "base"}}
+	top := testManifest("top", "1.0.0")
+	top.DependsOn = []model.Dependency{{ID: "middle"}}
+
+	registry.Replace([]model.LoadedPlugin{
+		{Manifest: top, Plugin: stubFor(top)},
+		{Manifest: middle, Plugin: stubFor(middle)},
+	})
+
+	requireStatus(t, registry, "middle", model.StatusMissingDependency)
+	requireStatus(t, registry, "top", model.StatusMissingDependency)
+}
+
 func TestRegistryVersionConstraintValidation(t *testing.T) {
 	registry := NewRegistry()
 	base := testManifest("base", "0.9.0")
@@ -140,6 +156,22 @@ func TestRegistryDetectsDependencyCycle(t *testing.T) {
 
 	requireStatus(t, registry, "first", model.StatusError)
 	requireStatus(t, registry, "second", model.StatusError)
+}
+
+func TestRegistryDoesNotTreatOptionalBackEdgeAsRequiredCycle(t *testing.T) {
+	registry := NewRegistry()
+	first := testManifest("first", "1.0.0")
+	second := testManifest("second", "1.0.0")
+	first.DependsOn = []model.Dependency{{ID: "second", Optional: true}}
+	second.DependsOn = []model.Dependency{{ID: "first"}}
+
+	registry.Replace([]model.LoadedPlugin{
+		{Manifest: first, Plugin: stubFor(first)},
+		{Manifest: second, Plugin: stubFor(second)},
+	})
+
+	requireStatus(t, registry, "first", model.StatusEnabled)
+	requireStatus(t, registry, "second", model.StatusEnabled)
 }
 
 func testManifest(id string, version string) model.Manifest {

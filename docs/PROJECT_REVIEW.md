@@ -55,7 +55,7 @@
 | 热加载/热卸载 | `Manager.Reload()` 和 `Manager.Watch()` 重新扫描目录并替换注册表，未变化插件复用，配置变更或删除 manifest 时关闭旧适配器 | `internal/core/manager.go`, `internal/registry/registry.go`, `internal/core/manager_test.go` |
 | 执行超时控制 | 每个插件 manifest 可配置 `timeout`，超时后终止插件进程 | `internal/executor/process.go` |
 | 插件隔离方案 | 插件以独立 OS 进程运行，无共享内存，进程失败不会拖垮主程序 | `internal/executor/process.go`, `internal/executor/process_unix.go`, `internal/executor/process_windows.go` |
-| 依赖关系与版本约束 | manifest 的 `depends_on` 支持依赖 ID 和 `=`, `>`, `>=`, `<`, `<=` 版本约束 | `internal/registry/registry.go`, `internal/version/version.go` |
+| 依赖关系与版本约束 | manifest 的 `depends_on` 支持依赖 ID 和 `=`, `>`, `>=`, `<`, `<=` 版本约束，并递归传播传递依赖失效状态 | `internal/registry/registry.go`, `internal/version/version.go` |
 | 失败隔离与降级策略 | 单插件失败只影响自身；配置 `fallback` 时返回降级结果并标记 `degraded` | `internal/executor/executor.go`, `plugins/go_slow/plugin.json` |
 | 多类型插件支持 | 同一协议支持 Go、Python、JavaScript 等外部进程插件 | `examples/plugins/`, `plugins/` |
 | README 设计说明 | README 包含架构、核心设计、取舍、后续演进和第三方库说明 | `README.md` |
@@ -89,7 +89,7 @@
    - Unix 平台按进程组终止，降低子进程残留风险。
 
 6. 依赖与版本约束
-   - 必需依赖缺失、禁用、异常或版本不满足时，依赖方不会执行。
+   - 必需依赖缺失、禁用、异常或版本不满足时，直接依赖方和传递依赖方都不会执行。
    - 支持检测依赖环并标记异常。
 
 7. 失败隔离与降级
