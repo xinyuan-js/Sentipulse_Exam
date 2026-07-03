@@ -1,0 +1,11 @@
+{
+  "id": "js.reverse",
+  "name": "JavaScript Reverse",
+  "version": "1.0.0",
+  "type": "js-process",
+  "enabled": false,
+  "command": "node",
+  "args": ["plugin.js"],
+  "working_dir": "../../examples/plugins/js_reverse",
+  "timeout": "3s"
+}

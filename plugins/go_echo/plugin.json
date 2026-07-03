@@ -1,0 +1,11 @@
+{
+  "id": "go.echo",
+  "name": "Go Echo",
+  "version": "1.0.0",
+  "type": "go-process",
+  "enabled": true,
+  "command": "go",
+  "args": ["run", "./examples/plugins/go_echo"],
+  "working_dir": "../..",
+  "timeout": "10s"
+}

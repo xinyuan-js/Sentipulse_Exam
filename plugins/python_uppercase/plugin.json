@@ -1,0 +1,11 @@
+{
+  "id": "python.uppercase",
+  "name": "Python Uppercase",
+  "version": "1.0.0",
+  "type": "python-process",
+  "enabled": false,
+  "command": "python3",
+  "args": ["plugin.py"],
+  "working_dir": "../../examples/plugins/python_uppercase",
+  "timeout": "3s"
+}

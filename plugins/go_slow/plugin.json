@@ -1,0 +1,15 @@
+{
+  "id": "go.slow",
+  "name": "Go Slow Degraded Demo",
+  "version": "1.0.0",
+  "type": "go-process",
+  "enabled": true,
+  "command": "go",
+  "args": ["run", "./examples/plugins/go_slow"],
+  "working_dir": "../..",
+  "timeout": "1s",
+  "fallback": {
+    "degraded": true,
+    "message": "go.slow timed out, fallback result returned"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "id": "go.word_stats",
+  "name": "Go Word Stats",
+  "version": "1.1.0",
+  "type": "go-process",
+  "enabled": true,
+  "command": "go",
+  "args": ["run", "./examples/plugins/go_word_stats"],
+  "working_dir": "../..",
+  "timeout": "10s",
+  "depends_on": [
+    {
+      "id": "go.echo",
+      "version": ">=1.0.0"
+    }
+  ]
+}
